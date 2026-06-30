@@ -32,3 +32,33 @@
 ---
 
 ## 🏗️ 项目结构
+src/
+├── controller
+├── service
+├── mapper
+├── entity
+├── config
+
+
+---
+
+## 🗄️ 数据库说明
+
+### 导入方式
+1. 创建 MySQL 数据库：`warehouse`
+2. 导入 sql/warehouse.sql
+3. 修改 application.yml 配置
+
+---
+
+## 🚀 运行方式
+
+```bash
+# 克隆项目
+git clone https://github.com/你的用户名/warehouse-based-on-spring-boot.git
+
+# 进入项目
+cd warehouse-based-on-spring-boot
+
+# 启动项目
+mvn spring-boot:run
