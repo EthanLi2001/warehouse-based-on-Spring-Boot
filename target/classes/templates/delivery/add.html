@@ -1,0 +1,135 @@
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="utf-8">
+    <title>添加发货单</title>
+    <meta name="renderer" content="webkit">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=0">
+    <link rel="stylesheet" th:href="@{/layuiadmin/layui/css/layui.css}" href="/static/layuiadmin/layui/css/layui.css" media="all">
+    <link rel="stylesheet" th:href="@{/layuiadmin/style/admin.css}" href="/static/layuiadmin/style/admin.css" media="all">
+</head>
+<body>
+<div class="layui-form" lay-filter="layuiadmin-app-form-list" id="layuiadmin-app-form-list" style="padding: 20px 30px 0 0;">
+
+    <div class="layui-form-item">
+        <label class="layui-form-label">销售订单</label>
+        <div class="layui-input-inline" style="width: 450px;">
+            <input type="text" name="orderInfo" th:value="${selectedOrder != null ? '订单#' + selectedOrder.oid + ' - ¥' + selectedOrder.totalPrice + ' (' + selectedOrder.userName + ')' : '请从订单列表创建发货单'}" 
+                   class="layui-input" readonly style="background-color: #f8f8f8; cursor: not-allowed;">
+            <input type="hidden" name="orderId" th:value="${selectedOrder != null ? selectedOrder.oid : ''}" lay-verify="required">
+        </div>
+    </div>
+
+    <div class="layui-form-item">
+        <label class="layui-form-label">物流公司</label>
+        <div class="layui-input-inline">
+            <input type="text" name="logisticsCompany" lay-verify="required" placeholder="请输入物流公司" autocomplete="off" class="layui-input">
+        </div>
+    </div>
+
+    <div class="layui-form-item">
+        <label class="layui-form-label">运单号</label>
+        <div class="layui-input-inline">
+            <input type="text" name="trackingNo" lay-verify="required" placeholder="请输入运单号" autocomplete="off" class="layui-input">
+        </div>
+    </div>
+
+    <div class="layui-form-item">
+        <label class="layui-form-label">备注</label>
+        <div class="layui-input-inline">
+            <textarea name="remark" placeholder="请输入备注" class="layui-textarea"></textarea>
+        </div>
+    </div>
+
+    <div class="layui-form-item">
+        <label class="layui-form-label">商品明细</label>
+        <div class="layui-input-block" style="margin-left: 100px;">
+            <table class="layui-table" id="productTable">
+                <thead>
+                    <tr>
+                        <th>商品名称</th>
+                        <th>单价</th>
+                        <th>数量</th>
+                        <th>小计</th>
+                    </tr>
+                </thead>
+                <tbody id="productList">
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="layui-form-item">
+        <label class="layui-form-label">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</label>
+        <div class="layui-input-inline">
+            <button class="layui-btn layuiadmin-btn-list layui-btn-normal" lay-submit lay-filter="layuiadmin-app-form-submit">确认发货</button>
+            <button class="layui-btn layuiadmin-btn-list layui-btn-primary" id="layuiadmin-app-add-cancel">取消</button>
+        </div>
+    </div>
+</div>
+
+<script src="/static/layuiadmin/layui/layui.js" th:src="@{/layuiadmin/layui/layui.js}"></script>
+<script src="/static/js/jquery-3.5.1.min.js" th:src="@{/js/jquery-3.5.1.min.js}"></script>
+<script>
+    layui.config({
+        base: '/layuiadmin/'
+    }).extend({
+        index: 'lib/index'
+    }).use(['index', 'form'], function () {
+        var $ = layui.jquery, layer = parent.layer === undefined ? layui.layer : parent.layer, form = layui.form;
+
+        // 页面加载完成后自动加载商品明细
+        $(document).ready(function() {
+            var orderId = $('input[name="orderId"]').val();
+            if (orderId) {
+                $.get('/delivery/getOrderDetails/' + orderId, function(data) {
+                    var html = '';
+                    if (data.details && data.details.length > 0) {
+                        data.details.forEach(function(item) {
+                            var subtotal = (item.price * item.quantity).toFixed(2);
+                            html += '<tr>';
+                            html += '<td>' + (item.pname || '未知商品') + '</td>';
+                            html += '<td>¥' + item.price + '</td>';
+                            html += '<td>' + item.quantity + '</td>';
+                            html += '<td>¥' + subtotal + '</td>';
+                            html += '</tr>';
+                        });
+                    }
+                    $('#productList').html(html);
+                });
+            }
+        });
+
+        form.on('submit(layuiadmin-app-form-submit)', function (data) {
+            var field = data.field;
+            var index = parent.layer.getFrameIndex(window.name);
+
+            $.ajax({
+                type: 'post',
+                url: '/delivery/add',
+                contentType: 'application/json',
+                data: JSON.stringify(field),
+                success: function (data) {
+                    if (data.code == '0') {
+                        layer.msg(data.msg || '发货成功', {time: 1500, end: function() { 
+                            parent.layer.close(index);
+                            parent.location.reload();
+                        }});
+                    } else {
+                        layer.msg(data.msg || '发货失败', {time: 1500});
+                    }
+                },
+                error: function() {
+                    layer.msg('网络异常', {time: 1500});
+                }
+            });
+            return false;
+        });
+    });
+
+    $("#layuiadmin-app-add-cancel").on('click', function () {
+        parent.layer.close(parent.layer.getFrameIndex(window.name));
+    });
+</script>
+</body>
+</html>

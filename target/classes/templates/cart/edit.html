@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="utf-8">
+    <title>修改购物车信息</title>
+    <meta name="renderer" content="webkit">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=0">
+    <link rel="stylesheet" th:href="@{/layuiadmin/layui/css/layui.css}" media="all">
+    <link rel="stylesheet" th:href="@{/layuiadmin/style/admin.css}" media="all">
+</head>
+<body>
+
+<div th:if="${errorMessage}" class="layui-card-body">
+    <div class="layui-alert layui-alert-error" th:text="${errorMessage}"></div>
+</div>
+
+<div class="layui-form" lay-filter="layuiadmin-app-form-list" id="layuiadmin-app-form-list" style="padding: 20px 30px 0 0;" th:if="${editCart != null}">
+
+    <!-- 用户名称: Conditional display and read-only -->
+    <div class="layui-form-item" th:if="${currentUserRole == 'admin'}">
+        <label class="layui-form-label">用户名称</label>
+        <div class="layui-input-block">
+            <input type="text" name="userNameDisplay" th:value="${editCart.userName}" class="layui-input layui-disabled" readonly>
+             <!-- Hidden field for UID if admin, though not strictly necessary if not changing owner -->
+            <input type="hidden" name="uid" th:value="${editCart.uid}">
+        </div>
+    </div>
+    <!-- For normal users, UID is implicit to their session, no field needed or a readonly display -->
+     <div class="layui-form-item" th:if="${currentUserRole == 'user' and currentUser != null}">
+        <label class="layui-form-label">用户名称</label>
+        <div class="layui-input-block">
+            <input type="text" name="userNameDisplay" th:value="${currentUser.name}" class="layui-input layui-disabled" readonly>
+        </div>
+    </div>
+
+    <!-- 商品名称: Read-only -->
+    <div class="layui-form-item">
+        <label class="layui-form-label">商品名称</label>
+        <div class="layui-input-block">
+            <input type="text" name="prodNameDisplay" th:value="${editCart.prodName}" class="layui-input layui-disabled" readonly>
+            <!-- Hidden field for PID, as it's not being changed -->
+            <input type="hidden" name="pid" th:value="${editCart.pid}">
+        </div>
+    </div>
+
+    <!-- 购买数量 -->
+    <div class="layui-form-item">
+        <label class="layui-form-label">购买数量</label>
+        <div class="layui-input-inline">
+            <input type="number" name="quantity" lay-verify="required|number" placeholder="请输入购买数量" autocomplete="off"
+                   class="layui-input" th:value="${editCart.quantity}" min="1">
+        </div>
+    </div>
+
+    <!-- 添加到购物车时间 (Read-only display) -->
+    <div class="layui-form-item">
+        <label class="layui-form-label">添加时间</label>
+        <div class="layui-input-inline">
+            <input type="text" name="addedTimeDisplay" 
+                   class="layui-input layui-disabled" th:value="${editCart.addedTime != null ? #dates.format(editCart.addedTime, 'yyyy-MM-dd HH:mm:ss') : ''}" readonly>
+            <!-- Removed hidden input for addedTime to prevent SpEL parse error -->
+        </div>
+    </div>
+
+    <!-- 隐藏域，用于存储购物车项ID -->
+    <div class="layui-form-item">
+        <div class="layui-input-inline">
+            <input type="hidden" name="cid" th:value="${editCart.cid}" />
+        </div>
+    </div>
+
+    <div class="layui-form-item">
+        <label class="layui-form-label">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</label>
+        <div class="layui-input-inline">
+            <button class="layui-btn layuiadmin-btn-list layui-btn-normal" lay-submit
+                    lay-filter="layuiadmin-app-form-submit" id="layuiadmin-app-add-submit">修改
+            </button>
+            <button type="button" class="layui-btn layuiadmin-btn-list layui-btn-primary"
+                    id="layuiadmin-app-add-cancel">取消
+            </button>
+        </div>
+    </div>
+</div>
+
+</body>
+<script src="/static/layuiadmin/layui/layui.js" th:src="@{/layuiadmin/layui/layui.js}"></script>
+<script src="/static/js/jquery-3.5.1.min.js" th:src="@{/js/jquery-3.5.1.min.js}"></script>
+<script>
+    layui.config({
+        base: '/layuiadmin/' //静态资源所在路径
+    }).extend({
+        index: 'lib/index' //主入口模块
+    }).use(['index', 'form'], function () {
+        var $ = layui.$
+            , layer = parent.layer === undefined ? layui.layer : parent.layer
+            , form = layui.form;
+
+        // If editCart is null (e.g. due to error or unauthorized access), form.render might not be needed or could error.
+        // The main form div is already conditionally rendered with th:if="${editCart != null}"
+        if ($('#layuiadmin-app-form-list').length) {
+             form.render(); // Render form elements like select, checkbox etc.
+        }
+
+        //监听提交
+        form.on('submit(layuiadmin-app-form-submit)', function (data) {
+            var field = data.field; //获取提交的字段
+            var index = parent.layer.getFrameIndex(window.name); //先得到当前iframe层的索引
+            
+            // Only cid and quantity are needed for the doEdit endpoint
+            var submissionData = {
+                cid: field.cid,
+                quantity: field.quantity
+            };
+
+            //提交 Ajax 成功后，关闭当前弹层并重载表格
+            $.ajax({
+                type: 'post',
+                url: '/cart/doEdit', 
+                data: submissionData, // Send only cid and quantity
+                success: function (res) { // Changed 'data' to 'res' to avoid conflict with outer 'data'
+                    if (res.code == '0') {
+                        // var param_search = { cid: parent$("#search_cid").val() }; // Not needed for myList view
+                        parent.layui.table.reload('LAY-app-content-list'); // Reload the parent table
+                        layer.msg(res.msg || '修改成功', {
+                            time: 1000,
+                            end: function () {
+                                parent.layer.close(index); //再执行关闭
+                            }
+                        });
+                    } else {
+                        layer.msg(res.msg || '修改失败', {
+                            time: 2000 // Longer time for error message
+                            // Consider not closing the window on failure so user can see error and correct
+                            // end: function () {
+                            //     parent.layer.close(index); //再执行关闭
+                            // }
+                        });
+                    }
+                },
+                error: function(xhr, status, error) {
+                     layer.msg('请求失败: ' + (xhr.responseJSON ? xhr.responseJSON.msg : error), {icon:5});
+                }
+            });
+            return false; // Prevent default form submission
+        });
+    })
+
+    $("#layuiadmin-app-add-cancel").on('click', function () {
+        parent.layer.close(parent.layer.getFrameIndex(window.name)); //再执行关闭
+    });
+</script>
+</html>
