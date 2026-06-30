@@ -1,0 +1,135 @@
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="utf-8">
+  <title>库存预警管理</title>
+  <meta name="renderer" content="webkit">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=0">
+  <link rel="stylesheet" th:href="@{/layuiadmin/layui/css/layui.css}" href="/static/layuiadmin/layui/css/layui.css" media="all">
+  <link rel="stylesheet" th:href="@{/layuiadmin/style/admin.css}" href="/static/layuiadmin/style/admin.css" media="all">
+</head>
+
+<body>
+<div class="layui-fluid">
+  <div class="layui-card">
+    <div class="layui-card-header">
+      <div class="layui-row">
+        <div class="layui-col-md8">库存预警管理</div>
+        <div class="layui-col-md4 text-right">
+          <button class="layui-btn layui-btn-sm" id="refreshBtn">刷新预警</button>
+        </div>
+      </div>
+    </div>
+    <div class="layui-card-body">
+      <div class="layui-row layui-col-space15">
+        <div class="layui-col-md6">
+          <div class="layui-card layui-bg-red">
+            <div class="layui-card-body">
+              <p class="layui-card-header">库存不足预警</p>
+              <p class="layui-card-text" style="font-size: 24px; color: #fff;" id="lowCount">0</p>
+            </div>
+          </div>
+        </div>
+        <div class="layui-col-md6">
+          <div class="layui-card layui-bg-orange">
+            <div class="layui-card-body">
+              <p class="layui-card-header">库存积压预警</p>
+              <p class="layui-card-text" style="font-size: 24px; color: #fff;" id="highCount">0</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <table class="layui-table" id="inventoryTable">
+        <thead>
+          <tr>
+            <th>商品名称</th>
+            <th>当前库存</th>
+            <th>库存下限</th>
+            <th>库存上限</th>
+            <th>预警状态</th>
+            <th>操作</th>
+          </tr>
+        </thead>
+        <tbody>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script th:src="@{/layuiadmin/layui/layui.js}" src="/static/layuiadmin/layui/layui.js"></script>
+<script type="text/javascript">
+  layui.config({
+    base: '/layuiadmin/'
+  }).extend({
+    index: 'lib/index'
+  }).use(['index', 'layer', 'table'], function(){
+    var layer = layui.layer
+            ,table = layui.table
+            ,$ = layui.jquery;
+
+    loadTable();
+    loadWarningCount();
+
+    $('#refreshBtn').on('click', function() {
+      loadTable();
+      loadWarningCount();
+    });
+
+    function loadTable() {
+      $.get('/inventory/warning/getAllInventory', function(data) {
+        var html = '';
+        data.forEach(function(item) {
+          var warningStatus = '<span class="layui-badge">正常</span>';
+          var warningClass = '';
+          if (item.warningType === 'low') {
+            warningStatus = '<span class="layui-badge layui-bg-red">库存不足</span>';
+            warningClass = 'layui-bg-red';
+          } else if (item.warningType === 'high') {
+            warningStatus = '<span class="layui-badge layui-bg-orange">库存积压</span>';
+            warningClass = 'layui-bg-orange';
+          }
+          
+          html += '<tr>';
+          html += '<td>' + item.productName + '</td>';
+          html += '<td>' + (item.currentStock || 0) + '</td>';
+          html += '<td>' + (item.minStock || 0) + '</td>';
+          html += '<td>' + (item.maxStock || 0) + '</td>';
+          html += '<td>' + warningStatus + '</td>';
+          html += '<td><button class="layui-btn layui-btn-xs" onclick="setStock(' + item.productId + ')">设置预警</button></td>';
+          html += '</tr>';
+        });
+        
+        if (data.length === 0) {
+          html = '<tr><td colspan="6" class="layui-text-center">暂无商品数据</td></tr>';
+        }
+        
+        $('#inventoryTable tbody').html(html);
+      });
+    }
+
+    function loadWarningCount() {
+      $.get('/inventory/warning/getWarningCount', function(data) {
+        $('#lowCount').text(data.lowWarning);
+        $('#highCount').text(data.highWarning);
+      });
+    }
+  });
+
+  function setStock(productId) {
+    layer.open({
+      type: 2
+      ,title: '设置库存预警'
+      ,area: ['500px','400px']
+      ,shade: 0.8
+      ,id: 'LAY_layuipro_set'
+      ,btn: []
+      ,btnAlign: 'c'
+      ,moveType: 1
+      ,content: '/inventory/warning/toSet/' + productId
+    });
+  }
+</script>
+</body>
+</html>

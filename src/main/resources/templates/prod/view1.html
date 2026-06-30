@@ -1,0 +1,71 @@
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="utf-8">
+    <title>订单月度分析信息</title>
+    <meta name="renderer" content="webkit">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=0">
+    <link rel="stylesheet" th:href="@{/layuiadmin/layui/css/layui.css}" href="/static/layuiadmin/layui/css/layui.css" media="all">
+    <link rel="stylesheet" th:href="@{/layuiadmin/style/admin.css}" href="/static/layuiadmin/style/admin.css" media="all">
+</head>
+<body>
+
+<div class="layui-fluid">
+    <div class="layui-card">
+        <div id="xxx" class="layui-form layui-card-header layuiadmin-card-header-auto">
+            <div class="layui-form-item">
+                <h3>订单月度分析</h3>
+            </div>
+        </div>
+        <input id="echarts_title" type="hidden" th:value="${echartTitle}">
+        <input id="echarts_xAxis" type="hidden" th:value="${echartXAxis.toString()}">
+        <input id="echarts_data" type="hidden" th:value="${echartSal}">
+
+        <div class="layui-card-body layui-form">
+            <!-- 为ECharts准备一个具备大小（宽高）的Dom -->
+            <div id="echartMain" style="width: 800px;height:600px;"></div>
+        </div>
+    </div>
+</div>
+
+<script src="/static/layuiadmin/layui/layui.js" th:src="@{/layuiadmin/layui/layui.js}"></script>
+<script src="/static/js/jquery-3.5.1.min.js" th:src="@{/js/jquery-3.5.1.min.js}"></script>
+<script src="/static/js/echarts.min.js" th:src="@{/js/echarts.min.js}"></script>
+<script type="text/javascript">
+    // 基于准备好的dom，初始化echarts实例
+    var myChart = echarts.init(document.getElementById('echartMain'));
+    var echarts_title = $("#echarts_title").val();
+    var echarts_xAxis = $("#echarts_xAxis").val();
+    // echarts_xAxis = echarts_xAxis.replaceAll('&#39;', "\'");
+    echarts_xAxis = echarts_xAxis.split(",");
+    console.log("echarts_xAxis=" + echarts_xAxis);
+    var echarts_data = $("#echarts_data").val();
+    echarts_data = echarts_data.split(",");
+    console.log("echarts_data=" + echarts_data);
+
+    // 指定图表的配置项和数据
+    var option = {
+        title: {
+            text: echarts_title
+        },
+        tooltip: {},
+        legend: {
+            data: ['销量']
+        },
+        xAxis: {
+            data: echarts_xAxis
+        },
+        yAxis: {},
+        series: [{
+            name: '销量',
+            type: 'bar',
+            data: echarts_data
+        }]
+    };
+
+    // 使用刚指定的配置项和数据显示图表。
+    myChart.setOption(option);
+</script>
+</body>
+</html>

@@ -1,0 +1,190 @@
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="utf-8">
+  <title>修改商品信息</title>
+  <meta name="renderer" content="webkit">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=0">
+  <link rel="stylesheet" th:href="@{/layuiadmin/layui/css/layui.css}" href="/static/layuiadmin/layui/css/layui.css" media="all">
+  <link rel="stylesheet" th:href="@{/layuiadmin/style/admin.css}" href="/static/layuiadmin/style/admin.css" media="all">
+</head>
+
+<body>
+<div class="layui-fluid">
+  <div class="layui-card">
+    <div class="layui-card-header">修改商品信息</div>
+    <div class="layui-card-body">
+      <form class="layui-form" lay-filter="layuiadmin-app-form-list" id="layuiadmin-app-form-list">
+        <div class="layui-form-item">
+          <label class="layui-form-label">商品编号</label>
+          <div class="layui-input-inline">
+            <input type="text" name="pid" lay-verify="required" placeholder="请输入商品编号" 
+                   autocomplete="off" class="layui-input" th:value="${editProd.pid}" readonly>
+          </div>
+        </div>
+
+        <div class="layui-form-item">
+          <label class="layui-form-label">商品名称</label>
+          <div class="layui-input-inline">
+            <input type="text" name="pname" lay-verify="required" placeholder="请输入商品名称" 
+                   autocomplete="off" class="layui-input" th:value="${editProd.pname}">
+          </div>
+        </div>
+
+        <div class="layui-form-item">
+          <label class="layui-form-label">商品单价</label>
+          <div class="layui-input-inline">
+            <input type="number" name="price" lay-verify="required" placeholder="请输入商品单价" 
+                   autocomplete="off" class="layui-input" th:value="${editProd.price}">
+          </div>
+        </div>
+
+        <div class="layui-form-item">
+          <label class="layui-form-label">库存下限</label>
+          <div class="layui-input-inline">
+            <input type="number" name="minStock" placeholder="请输入库存下限" 
+                   autocomplete="off" class="layui-input" th:value="${inventory.minStock}">
+          </div>
+        </div>
+
+        <div class="layui-form-item">
+          <label class="layui-form-label">库存上限</label>
+          <div class="layui-input-inline">
+            <input type="number" name="maxStock" placeholder="请输入库存上限" 
+                   autocomplete="off" class="layui-input" th:value="${inventory.maxStock}">
+          </div>
+        </div>
+
+        <div class="layui-form-item">
+          <label class="layui-form-label">商品描述</label>
+          <div class="layui-input-block">
+            <textarea name="description" lay-verify="required" placeholder="请输入商品描述" 
+                      class="layui-textarea" th:text="${editProd.description}"></textarea>
+          </div>
+        </div>
+
+        <div class="layui-form-item">
+          <label class="layui-form-label">商品图片</label>
+          <div class="layui-input-block">
+            <div class="layui-upload">
+              <button type="button" class="layui-btn layui-btn-normal" id="test-upload-change">选择文件</button>
+              <button type="button" class="layui-btn" id="test-upload-change-action">开始上传</button>
+              <input type="hidden" id="imageName" name="pfile" class="layui-input">
+            </div>
+          </div>
+        </div>
+
+        <div class="layui-form-item" th:if="${editProd.pfile != null and editProd.pfile != ''}">
+          <label class="layui-form-label">当前图片</label>
+          <div class="layui-input-block">
+            <img th:with="imageName=${#strings.startsWith(editProd.pfile, '/img/') ? #strings.substringAfter(editProd.pfile, '/img/') : editProd.pfile}"
+                 th:src="@{'/img/' + ${imageName}}"
+                 alt="商品图片" 
+                 style="max-width: 200px; max-height: 200px; margin-top: 10px; border: 1px solid #eee; padding: 5px;"/>
+          </div>
+        </div>
+
+        <div class="layui-form-item">
+          <div class="layui-input-block">
+            <button class="layui-btn layui-btn-normal" lay-submit lay-filter="layuiadmin-app-form-submit">
+              <i class="layui-icon layui-icon-edit"></i>保存修改
+            </button>
+            <button type="button" class="layui-btn layui-btn-primary" id="cancel-btn">
+              <i class="layui-icon layui-icon-close"></i>取消
+            </button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script th:src="@{/layuiadmin/layui/layui.js}" src="/static/layuiadmin/layui/layui.js"></script>
+<script th:src="@{/js/jquery-3.5.1.min.js}" src="/static/js/jquery-3.5.1.min.js"></script>
+<script type="text/javascript">
+  layui.config({
+    base: '/layuiadmin/'
+  }).extend({
+    index: 'lib/index'
+  }).use(['index', 'form', 'upload', 'layer'], function(){
+    var form = layui.form
+        ,upload = layui.upload
+        ,layer = parent.layer === undefined ? layui.layer : parent.layer
+        ,$ = layui.$;
+
+    upload.render({
+      elem: '#test-upload-change'
+      ,url: '/product/upload'
+      ,auto: false
+      ,bindAction: '#test-upload-change-action'
+      ,done: function(res){
+        if (res.code == 0) {
+          $("#imageName").val(res.data);
+          layer.msg('上传成功');
+        } else {
+          layer.msg(res.msg, {icon: 2});
+        }
+      }
+    });
+
+    form.on('submit(layuiadmin-app-form-submit)', function(data){
+      var field = data.field;
+      console.log('提交的表单数据:', field);
+      console.log('minStock:', field.minStock);
+      console.log('maxStock:', field.maxStock);
+      
+      var submitData = {
+        pid: parseInt(field.pid),
+        pname: field.pname,
+        price: parseFloat(field.price),
+        pfile: field.pfile,
+        description: field.description,
+        minStock: field.minStock ? parseInt(field.minStock) : null,
+        maxStock: field.maxStock ? parseInt(field.maxStock) : null
+      };
+      
+      console.log('转换后的提交数据:', submitData);
+      
+      var index = parent.layer.getFrameIndex(window.name);
+      
+      $.ajax({
+        type: 'post',
+        url: '/product/doEdit',
+        data: JSON.stringify(submitData),
+        contentType: 'application/json',
+        success: function(res){
+          if (res.code == '0') {
+            layer.msg('修改成功', {
+              time: 1000,
+              end: function(){
+                var parent$ = window.parent.layui.jquery;
+                var param_search = { pname: parent$("#search_prodName").val() };
+                
+                if (parent.tableRender && typeof parent.tableRender === 'function') {
+                  parent.tableRender(parent.layui.table, param_search);
+                } else if (parent.layui && parent.layui.table && parent.layui.table.reload) {
+                  parent.layui.table.reload('LAY-app-content-list', {where: param_search});
+                }
+                
+                parent.layer.close(index);
+              }
+            });
+          } else {
+            layer.msg('修改失败: ' + res.msg, {icon: 2});
+          }
+        },
+        error: function(){
+          layer.msg('网络异常', {icon: 2});
+        }
+      });
+      
+      return false;
+    });
+
+    $("#cancel-btn").on('click', function(){
+      parent.layer.close(parent.layer.getFrameIndex(window.name));
+    });
+  });
+</script>
+</body>
+</html>

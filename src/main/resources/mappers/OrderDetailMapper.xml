@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.baidu.myshop.dao.OrderDetailMapper">
+
+    <!-- 通用查询映射结果 -->
+    <resultMap id="BaseResultMap" type="com.baidu.myshop.pojo.OrderDetail">
+        <id column="opid" property="opid" />
+        <result column="oid" property="oid" />
+        <result column="pid" property="pid" />
+        <result column="quantity" property="quantity" />
+        <result column="price" property="price" />
+    </resultMap>
+
+</mapper>

@@ -1,0 +1,46 @@
+server:
+  port: 8006
+  tomcat:
+    uri-encoding: UTF-8
+  servlet:
+    encoding:
+      charset: UTF-8
+      force: true
+knife4j:
+  basic:
+    enable: true
+
+
+spring:
+
+  devtools:
+    restart:
+      additional-paths: src/main/java
+  jackson:
+    date-format: yyyy-MM-dd HH:mm:ss
+    serialization:
+      write-dates-as-timestamps: false
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/myshop?useUnicode=true&characterEncoding=utf-8&serverTimezone=UTC
+    username: root
+    password: 123456
+
+  thymeleaf:
+    prefix: classpath:/templates/
+    suffix: .html
+    cache: false
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
+
+file:
+  upload-dir: C:\Users\Lenovo\Desktop\基于spring boot的智能仓储系统设计与实现 - 副本\源代码\myshop\myshop\src\main\resources\static\img
+
+mybatis-plus:
+  mapper-locations: classpath:/mappers/*.xml
+  type-aliases-package: com.baidu.myshop.pojo
+  configuration:
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+    map-underscore-to-camel-case: false

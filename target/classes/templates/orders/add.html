@@ -1,0 +1,311 @@
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="utf-8">
+    <title>新增订单信息</title>
+    <meta name="renderer" content="webkit">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=0">
+    <link rel="stylesheet" th:href="@{/layuiadmin/layui/css/layui.css}" href="/static/layuiadmin/layui/css/layui.css"
+          media="all">
+    <link rel="stylesheet" th:href="@{/layuiadmin/style/admin.css}" href="/static/layuiadmin/style/admin.css"
+          media="all">
+</head>
+<body>
+
+<div class="layui-form" lay-filter="layuiadmin-app-form-list" id="layuiadmin-app-form-list"
+     style="padding: 20px 30px 0 0;">
+
+    <!-- 客户名称 下拉框 -->
+    <div class="layui-form-item">
+        <label class="layui-form-label">客户名称</label>
+        <div class="layui-input-inline">
+            <select name="customerId" lay-verify="required">
+                <option value="">请选择客户</option>
+                <th:block th:each="customer : ${customers}">
+                    <option th:value="${customer.customerId}" th:text="${customer.customerName}"></option>
+                </th:block>
+            </select>
+        </div>
+    </div>
+
+    <!-- 订单状态 -->
+    <div class="layui-form-item">
+        <label class="layui-form-label">订单状态</label>
+        <div class="layui-input-inline">
+            <select name="status" lay-verify="required">
+                <option value="0">待付款</option>
+                <option value="1">待打包</option>
+                <option value="2">待配送</option>
+                <option value="3">已完成</option>
+                <option value="4">已取消</option>
+            </select>
+        </div>
+    </div>
+
+    <!-- 配送时间 -->
+    <div class="layui-form-item">
+        <label class="layui-form-label">配送时间</label>
+        <div class="layui-input-inline">
+            <input type="datetime-local" name="deliveryTime" lay-verify="required" placeholder="请选择配送时间" autocomplete="off" class="layui-input" id="deliveryTime">
+        </div>
+    </div>
+
+    <!-- 商品明细 -->
+    <div class="layui-form-item">
+        <label class="layui-form-label">商品明细</label>
+        <div class="layui-input-inline">
+            <select id="productSelect" lay-verify="required">
+                <option value="">请选择商品</option>
+                <th:block th:each="product : ${products}">
+                    <option th:value="${product.pid}" th:data-price="${product.price}" th:data-stock="${product.quantity ?: 0}" th:text="${product.pname + ' (¥' + product.price + ') - 库存: ' + (product.quantity ?: 0)}" ></option>
+                </th:block>
+            </select>
+        </div>
+        <div class="layui-input-inline">
+            <input type="number" id="quantityInput" placeholder="数量" autocomplete="off" class="layui-input" min="1" value="1">
+        </div>
+        <span id="stockInfo" class="layui-badge layui-bg-gray" style="margin-left: 10px;">库存：-</span>
+        <button class="layui-btn layui-btn-sm" id="addProductBtn">添加商品</button>
+    </div>
+
+    <!-- 商品列表 -->
+    <div class="layui-form-item">
+        <div class="layui-input-block" style="margin-left: 100px;">
+            <table class="layui-table" id="productTable">
+                <thead>
+                    <tr>
+                        <th>商品名称</th>
+                        <th>单价</th>
+                        <th>数量</th>
+                        <th>小计</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody id="productList">
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- 订单总价 -->
+    <div class="layui-form-item">
+        <label class="layui-form-label">订单总价</label>
+        <div class="layui-input-inline">
+            <input type="number" name="totalPrice" lay-verify="required|number" placeholder="订单总价" autocomplete="off" class="layui-input" id="totalPrice" readonly>
+        </div>
+    </div>
+
+    <div class="layui-form-item">
+        <label class="layui-form-label">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</label>
+        <div class="layui-input-inline">
+            <button class="layui-btn layuiadmin-btn-list layui-btn-normal" lay-submit
+                    lay-filter="layuiadmin-app-form-submit" id="layuiadmin-app-add-submit">添加
+            </button>
+            <button class="layui-btn layuiadmin-btn-list layui-btn-primary"
+                    lay-filter="" id="layuiadmin-app-add-cancel">取消
+            </button>
+        </div>
+    </div>
+
+    <!-- 隐藏域，存储商品明细 -->
+    <input type="hidden" id="productIds" name="pids[]">
+    <input type="hidden" id="quantities" name="quantities[]">
+</div>
+
+</body>
+<script src="/static/layuiadmin/layui/layui.js" th:src="@{/layuiadmin/layui/layui.js}"></script>
+<script src="/static/js/jquery-3.5.1.min.js" th:src="@{/js/jquery-3.5.1.min.js}"></script>
+<script>
+    var productList = [];
+
+    layui.config({
+        base: '/layuiadmin/' //静态资源所在路径
+    }).extend({
+        index: 'lib/index' //主入口模块
+    }).use(['index', 'form', 'laydate'], function () {
+        var $ = layui.jquery
+            , layer = parent.layer === undefined ? layui.layer : parent.layer
+            , form = layui.form
+            , laydate = layui.laydate;
+
+        // 商品选择变化时显示库存信息
+        $('#productSelect').on('change', function() {
+            var option = $('#productSelect option:selected');
+            var stock = option.data('stock') || 0;
+            $('#stockInfo').text('库存：' + stock);
+            if (stock <= 0) {
+                $('#stockInfo').removeClass('layui-bg-gray').addClass('layui-bg-red');
+            } else if (stock < 10) {
+                $('#stockInfo').removeClass('layui-bg-gray').addClass('layui-bg-orange');
+            } else {
+                $('#stockInfo').removeClass('layui-bg-red layui-bg-orange').addClass('layui-bg-gray');
+            }
+        });
+
+        // 添加商品到列表
+        $('#addProductBtn').on('click', function() {
+            var pid = $('#productSelect').val();
+            var quantity = parseInt($('#quantityInput').val());
+            var option = $('#productSelect option:selected');
+            var pname = option.text().split(' (')[0];
+            var price = parseFloat(option.data('price'));
+            var stock = option.data('stock') || 0;
+
+            if (!pid || quantity <= 0) {
+                layer.msg('请选择商品并输入有效数量');
+                return;
+            }
+
+            if (quantity > stock) {
+                layer.msg('库存不足，当前库存: ' + stock + '，需求: ' + quantity);
+                return;
+            }
+
+            var existingItem = productList.find(item => item.pid == pid);
+            if (existingItem) {
+                var newQuantity = existingItem.quantity + quantity;
+                if (newQuantity > stock) {
+                    layer.msg('库存不足，当前库存: ' + stock + '，已选: ' + existingItem.quantity + '，需求: ' + quantity);
+                    return;
+                }
+                existingItem.quantity = newQuantity;
+            } else {
+                productList.push({
+                    pid: pid,
+                    pname: pname,
+                    price: price,
+                    quantity: quantity,
+                    stock: stock
+                });
+            }
+
+            updateProductTable();
+            updateTotalPrice();
+        });
+
+        // 更新商品列表表格
+        function updateProductTable() {
+            var html = '';
+            productList.forEach(function(item, index) {
+                var subtotal = (item.price * item.quantity).toFixed(2);
+                html += '<tr>';
+                html += '<td>' + item.pname + '</td>';
+                html += '<td>¥' + item.price.toFixed(2) + '</td>';
+                html += '<td>' + item.quantity + '</td>';
+                html += '<td>¥' + subtotal + '</td>';
+                html += '<td><button class="layui-btn layui-btn-danger layui-btn-xs" onclick="removeProduct(' + index + ')">删除</button></td>';
+                html += '</tr>';
+            });
+            $('#productList').html(html);
+            updateHiddenFields();
+        }
+
+        // 更新隐藏域
+        function updateHiddenFields() {
+            var pids = productList.map(item => item.pid);
+            var quantities = productList.map(item => item.quantity);
+            $('#productIds').val(pids.join(','));
+            $('#quantities').val(quantities.join(','));
+        }
+
+        // 更新总价
+        function updateTotalPrice() {
+            var total = productList.reduce(function(sum, item) {
+                return sum + (item.price * item.quantity);
+            }, 0);
+            $('#totalPrice').val(total.toFixed(2));
+        }
+
+        //监听提交
+        form.on('submit(layuiadmin-app-form-submit)', function (data) {
+            var field = data.field; //获取提交的字段
+            
+            if (productList.length === 0) {
+                layer.msg('请至少添加一件商品');
+                return false;
+            }
+
+            var index = parent.layer.getFrameIndex(window.name); //先得到当前iframe层的索引
+            console.log(field);
+            var parent$ = window.parent.layui.jquery;
+
+            // 构建商品明细数据
+            var pids = productList.map(item => item.pid);
+            var quantities = productList.map(item => item.quantity);
+
+            //提交 Ajax 成功后，关闭当前弹层并重载表格
+            $.ajax({
+                type: 'post',
+                url: '/orders/doAdd', // ajax请求路径
+                data: {
+                    customerId: field.customerId,
+                    status: field.status,
+                    deliveryTime: field.deliveryTime,
+                    totalPrice: $('#totalPrice').val(),
+                    'pids[]': pids,
+                    'quantities[]': quantities
+                },
+                success: function (data) {
+                    console.log(data);
+                    if (data.code == '0') {
+                        var param_search = {
+                            oid: parent$("#search_oid").val()
+                        };
+                        parent.tableRender(parent.layui.table, param_search);
+                        layer.msg('添加成功', {
+                            time: 1000,
+                            end: function () {
+                                parent.layer.close(index); //再执行关闭
+                            }
+                        });
+                    } else {
+                        layer.msg('添加失败', {
+                            time: 1000,
+                            end: function () {
+                                parent.layer.close(index); //再执行关闭
+                            }
+                        });
+                    }
+                }
+            });
+        });
+    });
+
+    // 删除商品
+    function removeProduct(index) {
+        productList.splice(index, 1);
+        var $ = layui.jquery;
+        var layer = parent.layer === undefined ? layui.layer : parent.layer;
+        
+        var html = '';
+        productList.forEach(function(item, i) {
+            var subtotal = (item.price * item.quantity).toFixed(2);
+            html += '<tr>';
+            html += '<td>' + item.pname + '</td>';
+            html += '<td>¥' + item.price.toFixed(2) + '</td>';
+            html += '<td>' + item.quantity + '</td>';
+            html += '<td>¥' + subtotal + '</td>';
+            html += '<td><button class="layui-btn layui-btn-danger layui-btn-xs" onclick="removeProduct(' + i + ')">删除</button></td>';
+            html += '</tr>';
+        });
+        $('#productList').html(html);
+
+        // 更新隐藏域
+        var pids = productList.map(item => item.pid);
+        var quantities = productList.map(item => item.quantity);
+        $('#productIds').val(pids.join(','));
+        $('#quantities').val(quantities.join(','));
+
+        // 更新总价
+        var total = productList.reduce(function(sum, item) {
+            return sum + (item.price * item.quantity);
+        }, 0);
+        $('#totalPrice').val(total.toFixed(2));
+    }
+
+    $("#layuiadmin-app-add-cancel").on('click', function () {
+        parent.layer.close(parent.layer.getFrameIndex(window.name)); //再执行关闭
+    });
+</script>
+</html>
